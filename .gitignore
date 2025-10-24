@@ -1,0 +1,25 @@
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+.env/
+
+# Models and datasets
+models/
+data/
+*.h5
+*.pt
+*.ckpt
+
+# Flutter build and cache
+build/
+.dart_tool/
+.pub-cache/
+ios/
+android/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
