@@ -58,7 +58,7 @@ You are free to use, modify, and distribute it for research and educational purp
 🤖 Salesforce BLIP-2
  — Vision-language captioning model
 
-   MedCLIP
+🔍 MedCLIP
  — Medical image-text embedding model
 
 🗃️ ChromaDB
