@@ -7,7 +7,7 @@ venv/
 .env/
 
 # Models and datasets
-models/
+/models/
 data/
 *.h5
 *.pt
