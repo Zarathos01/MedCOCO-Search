@@ -1,0 +1,12 @@
+[33mbf2a00b[m[33m ([m[1;36mHEAD[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmaster[m[33m, [m[1;32mmain[m[33m)[m Backend structure
+[33m089151d[m update files
+[33m2552db8[m test
+[33m9937bca[m Update README to remove Git ignore note
+[33m26aa203[m Add top-level models folder with placeholder README
+[33mab5c7ae[m Fix .gitignore to track backend/models folder
+[33m95068f1[m Track backend model scripts
+[33m986e9da[m Update MedCLIP section with new emoji
+[33m8549d6b[m Add full project folder structure and initial files
+[33m3409acd[m Revise README for improved clarity and structure
+[33ma606017[m Revise README with project details and features
+[33md046daf[m Initial commit
