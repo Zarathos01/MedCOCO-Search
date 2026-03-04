@@ -23,3 +23,8 @@ android/
 # Jupyter notebook checkpoints
 .ipynb_checkpoints/
 
+/backend/storage/
+/backend/chroma_db/
+/models/
+*.bin
+
