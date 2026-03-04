@@ -26,7 +26,7 @@ ROCO (Radiology Objects in Context)
 
 • Ideal for multimodal AI tasks like retrieval, captioning, and diagnosis support.
 
-<h2>🧩 Technology Stack</h2> <table> <tr> <th style="text-align:center;">Layer</th> <th style="text-align:center;">Technology</th> <th style="text-align:center;">Description</th> </tr> <tr> <td><b>AI Models</b></td> <td>MedCLIP, BLIP-2</td> <td>Medical vision-language understanding and caption generation</td> </tr> <tr> <td><b>Backend</b></td> <td>FastAPI (Python)</td> <td>High-performance REST API for model inference and requests</td> </tr> <tr> <td><b>Database</b></td> <td>ChromaDB</td> <td>Vector storage and similarity search for image-text embeddings</td> </tr> <tr> <td><b>Frontend</b></td> <td>Flutter (Dart)</td> <td>Modern cross-platform interface for search and results</td> </tr> <tr> <td><b>Storage</b></td> <td>SQLite</td> <td>Efficient local caching and lightweight data persistence</td> </tr> </table>
+<h2>🧩 Technology Stack</h2> <table> <tr> <th style="text-align:center;">Layer</th> <th style="text-align:center;">Technology</th> <th style="text-align:center;">Description</th> </tr> <tr> <td><b>AI Models</b></td> <td>MedCLIP, MedBLIP</td> <td>Medical vision-language understanding and caption generation</td> </tr> <tr> <td><b>Backend</b></td> <td>FastAPI (Python)</td> <td>High-performance REST API for model inference and requests</td> </tr> <tr> <td><b>Database</b></td> <td>ChromaDB</td> <td>Vector storage and similarity search for image-text embeddings</td> </tr> <tr> <td><b>Frontend</b></td> <td>Flutter (Dart)</td> <td>Modern cross-platform interface for search and results</td> </tr> <tr> <td><b>Storage</b></td> <td>SQLite</td> <td>Efficient local caching and lightweight data persistence</td> </tr> </table>
 <h2>🎯 Objectives</h2>
 
 Build a natural language–driven retrieval system for large-scale medical image datasets.
@@ -55,8 +55,8 @@ You are free to use, modify, and distribute it for research and educational purp
 🧬 ROCO Dataset
  — Radiology Objects in Context
 
-🤖 Salesforce BLIP-2
- — Vision-language captioning model
+🤖 MedBlip
+ — Medical Vision-language captioning model
 
 🔍 MedCLIP
  — Medical image-text embedding model
