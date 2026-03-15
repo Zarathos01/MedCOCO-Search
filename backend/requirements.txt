@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+chromadb
+transformers
+torch
+torchvision
+sentencepiece
+accelerate

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MedCOCO-Search API Tester</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 30px; color: #333; }
+    h1 { text-align: center; margin-bottom: 30px; color: #2d3748; font-size: 24px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-full { grid-column: 1 / -1; }
+
+    .card {
+      background: white; border-radius: 12px; padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    h2 { font-size: 16px; margin-bottom: 16px; color: #4a5568; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+
+    label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 13px; color: #4a5568; }
+    input[type="file"], input[type="text"], input[type="number"] {
+      width: 100%; padding: 9px 12px; border: 1px solid #cbd5e0;
+      border-radius: 8px; font-size: 14px; margin-bottom: 12px; outline: none;
+    }
+    input:focus { border-color: #4299e1; }
+
+    .btn {
+      border: none; padding: 9px 20px; border-radius: 8px;
+      cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s;
+    }
+    .btn-blue  { background: #4299e1; color: white; }
+    .btn-blue:hover  { background: #3182ce; }
+    .btn-red   { background: #fc8181; color: white; }
+    .btn-red:hover   { background: #e53e3e; }
+    .btn-gray  { background: #e2e8f0; color: #4a5568; }
+    .btn-gray:hover  { background: #cbd5e0; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+    .response {
+      margin-top: 14px; background: #1a202c; color: #68d391;
+      padding: 14px; border-radius: 8px; font-family: monospace;
+      font-size: 12px; white-space: pre-wrap; max-height: 200px;
+      overflow-y: auto; display: none;
+    }
+    .response.err { color: #fc8181; }
+
+    .results-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 14px; margin-top: 12px;
+    }
+    .result-card {
+      border: 1px solid #e2e8f0; border-radius: 10px;
+      overflow: hidden; background: #f7fafc; transition: 0.2s;
+    }
+    .result-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .result-card img { width: 100%; height: 150px; object-fit: cover; }
+    .result-info { padding: 10px; }
+    .score { color: #4299e1; font-weight: bold; font-size: 13px; }
+    .caption { font-size: 12px; color: #4a5568; margin-top: 4px; line-height: 1.4; }
+    .filename { font-size: 11px; color: #a0aec0; margin-top: 4px; }
+
+    .history-entry {
+      border: 1px solid #e2e8f0; border-radius: 10px;
+      margin-bottom: 14px; overflow: hidden;
+    }
+    .history-header {
+      background: #edf2f7; padding: 10px 16px;
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; user-select: none;
+    }
+    .history-header:hover { background: #e2e8f0; }
+    .history-header .query-text { font-weight: bold; color: #2d3748; font-size: 14px; }
+    .history-header .meta { font-size: 12px; color: #718096; margin-top: 2px; }
+    .history-header .right { display: flex; align-items: center; gap: 10px; }
+    .history-body { padding: 14px; display: none; }
+    .history-body.open { display: block; }
+    .badge { background: #4299e1; color: white; border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: bold; }
+    .no-history { color: #a0aec0; font-size: 14px; text-align: center; padding: 20px; }
+
+    .db-id {
+      background: #edf2f7; border-radius: 6px; padding: 6px 10px;
+      font-size: 12px; font-family: monospace; margin-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .db-id span { color: #4a5568; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 78%; }
+
+    .status { padding: 5px 12px; border-radius: 6px; font-size: 13px; display: inline-block; margin-top: 8px; }
+    .status.ok  { background: #c6f6d5; color: #276749; }
+    .status.err { background: #fed7d7; color: #9b2c2c; }
+
+    #historyCount { font-size: 12px; color: #718096; margin-left: 8px; font-weight: normal; }
+  </style>
+</head>
+<body>
+
+<h1>🏥 MedCOCO-Search API Tester</h1>
+
+<div class="grid">
+
+  <!-- Server -->
+  <div class="card">
+    <h2>⚙️ Server</h2>
+    <label>API Base URL</label>
+    <input type="text" id="baseUrl" value="http://localhost:8000/api/v1" />
+    <div class="btn-row">
+      <button class="btn btn-blue" onclick="checkHealth()">Check Health</button>
+    </div>
+    <div id="healthStatus"></div>
+  </div>
+
+  <!-- Upload -->
+  <div class="card">
+    <h2>📤 Upload Images</h2>
+    <label>Select one or more images</label>
+    <input type="file" id="uploadFiles" multiple accept="image/*" />
+    <div class="btn-row">
+      <button class="btn btn-blue" id="uploadBtn" onclick="uploadImages()">Upload</button>
+    </div>
+    <div class="response" id="uploadResponse"></div>
+  </div>
+
+  <!-- Search -->
+  <div class="card">
+    <h2>🔍 Search</h2>
+    <label>Text Query</label>
+    <input type="text" id="searchQuery" placeholder="e.g. chest x-ray with pneumonia"
+      onkeydown="if(event.key==='Enter') searchImages()" />
+    <label>Top K</label>
+    <input type="number" id="topK" value="3" min="1" max="20" style="width:80px" />
+    <div class="btn-row">
+      <button class="btn btn-blue" id="searchBtn" onclick="searchImages()">Search</button>
+      <button class="btn btn-gray" onclick="clearCurrentResults()">Clear</button>
+    </div>
+    <div id="currentResults"></div>
+  </div>
+
+  <!-- Database -->
+  <div class="card">
+    <h2>🗄️ Database</h2>
+    <div class="btn-row">
+      <button class="btn btn-blue" onclick="listImages()">Refresh List</button>
+      <button class="btn btn-red" onclick="resetDatabase()">🗑 Reset All</button>
+    </div>
+    <div id="dbList" style="margin-top:14px; max-height:240px; overflow-y:auto;"></div>
+  </div>
+
+  <!-- History -->
+  <div class="card grid-full">
+    <h2 style="display:flex;align-items:center;justify-content:space-between">
+      <span>📜 Search History <span id="historyCount"></span></span>
+      <button class="btn btn-gray" style="font-size:12px;padding:4px 12px" onclick="clearHistory()">Clear All</button>
+    </h2>
+    <div id="historyList"><div class="no-history">No searches yet. Results will appear here after each search.</div></div>
+  </div>
+
+</div>
+
+<script>
+  let searchHistory = [];
+
+  function getBase() {
+    return document.getElementById('baseUrl').value.replace(/\/$/, '');
+  }
+
+  // ── Health ──────────────────────────────────────────────────────────
+  async function checkHealth() {
+    try {
+      const res = await fetch(`${getBase()}/health`);
+      const data = await res.json();
+      document.getElementById('healthStatus').innerHTML =
+        `<div class="status ok">✅ ${data.message}</div>`;
+    } catch {
+      document.getElementById('healthStatus').innerHTML =
+        `<div class="status err">❌ Server not reachable. Is uvicorn running?</div>`;
+    }
+  }
+
+  // ── Upload ──────────────────────────────────────────────────────────
+  async function uploadImages() {
+    const files = document.getElementById('uploadFiles').files;
+    if (!files.length) { alert('Please select at least one image.'); return; }
+
+    const btn = document.getElementById('uploadBtn');
+    btn.disabled = true; btn.textContent = 'Uploading...';
+
+    const formData = new FormData();
+    for (const file of files) formData.append('files', file);
+
+    try {
+      const res = await fetch(`${getBase()}/upload`, { method: 'POST', body: formData });
+      const data = await res.json();
+      showResponse('uploadResponse', data, !res.ok);
+      if (res.ok) listImages();
+    } catch (e) {
+      showResponse('uploadResponse', { error: e.message }, true);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Upload';
+    }
+  }
+
+  // ── Search ──────────────────────────────────────────────────────────
+  async function searchImages() {
+    const query = document.getElementById('searchQuery').value.trim();
+    const topK  = parseInt(document.getElementById('topK').value);
+    if (!query) { alert('Please enter a search query.'); return; }
+
+    const btn = document.getElementById('searchBtn');
+    btn.disabled = true; btn.textContent = 'Searching...';
+
+    try {
+      const res = await fetch(`${getBase()}/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, top_k: topK })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        document.getElementById('currentResults').innerHTML =
+          `<div class="status err">❌ ${data.detail}</div>`;
+        return;
+      }
+
+      // Show in current results area
+      renderCurrentResults(data);
+
+      // Move previous current results to history, add new entry
+      addToHistory(data);
+
+    } catch (e) {
+      document.getElementById('currentResults').innerHTML =
+        `<div class="status err">❌ ${e.message}</div>`;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Search';
+    }
+  }
+
+  function renderCurrentResults(data) {
+    const container = document.getElementById('currentResults');
+    if (!data.results || data.results.length === 0) {
+      container.innerHTML = `<div class="status err" style="margin-top:12px">No results found. Upload images first.</div>`;
+      return;
+    }
+    container.innerHTML = `
+      <p style="margin-top:12px;font-size:13px;color:#4a5568;">
+        <b>${data.count}</b> result(s) for: <i>"${data.query}"</i>
+      </p>
+      <div class="results-grid">${data.results.map(r => resultCardHTML(r)).join('')}</div>
+    `;
+  }
+
+  function resultCardHTML(r) {
+    return `
+      <div class="result-card">
+        <img src="data:image/jpeg;base64,${r.image_b64}" alt="${r.filename}" />
+        <div class="result-info">
+          <div class="score">Score: ${(r.similarity_score * 100).toFixed(1)}%</div>
+          <div class="caption">${r.caption}</div>
+          <div class="filename">${r.filename}</div>
+        </div>
+      </div>`;
+  }
+
+  function clearCurrentResults() {
+    document.getElementById('currentResults').innerHTML = '';
+    document.getElementById('searchQuery').value = '';
+  }
+
+  // ── History ─────────────────────────────────────────────────────────
+  function addToHistory(data) {
+    searchHistory.unshift({
+      id: Date.now(),
+      query: data.query,
+      count: data.count,
+      time: new Date().toLocaleTimeString(),
+      results: data.results || []
+    });
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list  = document.getElementById('historyList');
+    const count = document.getElementById('historyCount');
+    count.textContent = `(${searchHistory.length})`;
+
+    if (!searchHistory.length) {
+      list.innerHTML = '<div class="no-history">No searches yet. Results will appear here after each search.</div>';
+      return;
+    }
+
+    list.innerHTML = searchHistory.map(entry => `
+      <div class="history-entry">
+        <div class="history-header" onclick="toggleHistory(${entry.id})">
+          <div>
+            <div class="query-text">🔍 "${entry.query}"</div>
+            <div class="meta">🕐 ${entry.time}</div>
+          </div>
+          <div class="right">
+            <span class="badge">${entry.count} result(s)</span>
+            <button class="btn btn-red" style="padding:4px 10px;font-size:12px"
+              onclick="event.stopPropagation(); deleteHistoryEntry(${entry.id})">✕</button>
+          </div>
+        </div>
+        <div class="history-body" id="hist-${entry.id}">
+          ${entry.results.length
+            ? `<div class="results-grid">${entry.results.map(r => resultCardHTML(r)).join('')}</div>`
+            : `<div class="no-history">No results for this query.</div>`}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleHistory(id) {
+    const body = document.getElementById(`hist-${id}`);
+    body.classList.toggle('open');
+  }
+
+  function deleteHistoryEntry(id) {
+    searchHistory = searchHistory.filter(e => e.id !== id);
+    renderHistory();
+  }
+
+  function clearHistory() {
+    if (!searchHistory.length) return;
+    if (confirm('Clear all search history?')) {
+      searchHistory = [];
+      renderHistory();
+    }
+  }
+
+  // ── Database ─────────────────────────────────────────────────────────
+  async function listImages() {
+    try {
+      const res  = await fetch(`${getBase()}/images`);
+      const data = await res.json();
+      const list = document.getElementById('dbList');
+
+      if (!data.image_ids || data.image_ids.length === 0) {
+        list.innerHTML = '<div class="no-history">No images in database.</div>';
+        return;
+      }
+
+      list.innerHTML = `
+        <p style="font-size:13px;color:#4a5568;margin-bottom:10px">
+          Total: <b>${data.total}</b> image(s)
+        </p>` +
+        data.image_ids.map(id => `
+          <div class="db-id">
+            <span title="${id}">${id}</span>
+            <button class="btn btn-red" style="padding:3px 10px;font-size:11px"
+              onclick="deleteImage('${id}')">Delete</button>
+          </div>`).join('');
+    } catch (e) {
+      document.getElementById('dbList').innerHTML =
+        `<div class="status err">❌ ${e.message}</div>`;
+    }
+  }
+
+  async function deleteImage(id) {
+    if (!confirm(`Delete image\n${id}?`)) return;
+    try {
+      await fetch(`${getBase()}/images/${id}`, { method: 'DELETE' });
+      listImages();
+    } catch (e) {
+      alert('Delete failed: ' + e.message);
+    }
+  }
+
+  async function resetDatabase() {
+    if (!confirm('Delete ALL images from the database?\nThis cannot be undone.')) return;
+    try {
+      const res  = await fetch(`${getBase()}/images`);
+      const data = await res.json();
+      for (const id of (data.image_ids || [])) {
+        await fetch(`${getBase()}/images/${id}`, { method: 'DELETE' });
+      }
+      listImages();
+      alert(`✅ Database reset. ${data.image_ids?.length || 0} image(s) deleted.`);
+    } catch (e) {
+      alert('Reset failed: ' + e.message);
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function showResponse(id, data, isError = false) {
+    const el = document.getElementById(id);
+    el.style.display = 'block';
+    el.className = 'response' + (isError ? ' err' : '');
+    el.textContent = JSON.stringify(data, null, 2);
+  }
+
+  window.onload = () => { checkHealth(); listImages(); };
+</script>
+</body>
+</html>
