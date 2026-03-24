@@ -13,7 +13,7 @@ CHROMA_COLLECTION = "medical_images"
 TOP_K = 5
 
 # MedCLIP model
-MEDCLIP_MODEL_NAME = "ZiyueWang/med-clip"
+MEDCLIP_MODEL_NAME = "hf-hub:luhuitong/CLIP-ViT-L-14-448px-MedICaT-ROCO"
 
 # MedBLIP model
 MEDBLIP_MODEL_NAME = "WafaaFraih/blip-roco-radiology-captioning"

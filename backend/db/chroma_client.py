@@ -30,7 +30,7 @@ def search_images(query_embedding: list[float], top_k: int) -> list[dict]:
         items.append({
             "image_id": results["ids"][0][i],
             "metadata": results["metadatas"][0][i],
-            "similarity_score": round(1 - results["distances"][0][i], 4)
+            "similarity_score": round(results["distances"][0][i], 4)  # Direct cosine similarity
         })
     return items
 

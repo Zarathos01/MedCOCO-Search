@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from transformers import CLIPProcessor, CLIPModel
+import open_clip
 from PIL import Image
 from config import MEDCLIP_MODEL_NAME, DEVICE
 
@@ -8,49 +8,46 @@ from config import MEDCLIP_MODEL_NAME, DEVICE
 class MedCLIPModel:
     def __init__(self):
         self.model = None
-        self.processor = None
+        self.preprocess = None
+        self.tokenizer = None
+        self.image_dim = None
 
     def load(self):
         print(f"[MedCLIP] Loading model: {MEDCLIP_MODEL_NAME} on {DEVICE}")
-        self.model = CLIPModel.from_pretrained(MEDCLIP_MODEL_NAME).to(DEVICE)
-        self.processor = CLIPProcessor.from_pretrained(MEDCLIP_MODEL_NAME)
+
+        # open_clip loads differently — no CLIPModel/CLIPProcessor
+        self.model, _, self.preprocess = open_clip.create_model_and_transforms(
+            MEDCLIP_MODEL_NAME
+        )
+        self.tokenizer = open_clip.get_tokenizer(MEDCLIP_MODEL_NAME)
+        self.model = self.model.to(DEVICE)
         self.model.eval()
 
-        # Check actual dimensions of both towers
+        # Detect image embedding dimension
         with torch.no_grad():
-            dummy_image = Image.new("RGB", (224, 224))
-            img_inputs = self.processor(images=dummy_image, return_tensors="pt").to(DEVICE)
-            img_out = self.model.vision_model(**img_inputs)
-            self.image_dim = img_out.pooler_output.shape[-1]
-
-            text_inputs = self.processor(text=["test"], return_tensors="pt", padding=True).to(DEVICE)
-            txt_out = self.model.text_model(**text_inputs)
-            self.text_dim = txt_out.pooler_output.shape[-1]
+            dummy = self.preprocess(Image.new("RGB", (224, 224))).unsqueeze(0).to(DEVICE)
+            features = self.model.encode_image(dummy)
+            self.image_dim = features.shape[-1]
 
         print(f"[MedCLIP] Image embedding dim: {self.image_dim}")
-        print(f"[MedCLIP] Text embedding dim:  {self.text_dim}")
         print("[MedCLIP] Model loaded successfully.")
 
     def embed_image(self, image: Image.Image) -> list[float]:
-        """Generate 768D embedding for a PIL image."""
-        inputs = self.processor(images=image, return_tensors="pt").to(DEVICE)
+        """Generate embedding for a PIL image."""
+        tensor = self.preprocess(image).unsqueeze(0).to(DEVICE)
         with torch.no_grad():
-            outputs = self.model.vision_model(**inputs)
-            features = outputs.pooler_output
+            features = self.model.encode_image(tensor)
             features = features / features.norm(dim=-1, keepdim=True)
         return features.squeeze().cpu().tolist()
 
     def embed_text(self, text: str) -> list[float]:
-        """Generate text embedding and pad it to match image dimension (768D)."""
-        inputs = self.processor(
-            text=[text], return_tensors="pt", padding=True, truncation=True
-        ).to(DEVICE)
+        """Generate embedding for a text query and match image dimension."""
+        tokens = self.tokenizer([text]).to(DEVICE)
         with torch.no_grad():
-            outputs = self.model.text_model(**inputs)
-            features = outputs.pooler_output
+            features = self.model.encode_text(tokens)
             features = features / features.norm(dim=-1, keepdim=True)
 
-            # Pad text embedding from 512D to 768D to match image embeddings
+            # Pad if text dim doesn't match image dim
             if features.shape[-1] < self.image_dim:
                 pad_size = self.image_dim - features.shape[-1]
                 features = F.pad(features, (0, pad_size))
