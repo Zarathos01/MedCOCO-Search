@@ -1,10 +1,43 @@
+# ── FastAPI ───────────────────────────────────────────────
 fastapi
 uvicorn[standard]
 python-multipart
-pillow
+pydantic
+pydantic-settings
+pydantic[email]
+
+# ── Database (SQL) ────────────────────────────────────────
+sqlmodel
+sqlalchemy
+asyncpg
+alembic
+
+# ── Database (Vector) ─────────────────────────────────────
 chromadb
-transformers
+
+# ── Auth ──────────────────────────────────────────────────
+PyJWT
+passlib[bcrypt]
+bcrypt
+
+# ── Redis ─────────────────────────────────────────────────
+redis
+
+# ── Email / Tasks ─────────────────────────────────────────
+fastapi-mail
+celery
+aiosmtplib
+
+# ── AI Models ─────────────────────────────────────────────
 torch
 torchvision
+transformers
+open-clip-torch
 sentencepiece
 accelerate
+
+# ── Utils ─────────────────────────────────────────────────
+pillow
+python-dotenv
+aiofiles
+httpx

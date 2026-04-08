@@ -4,11 +4,7 @@ logger = logging.getLogger(__name__)
 
 
 def load_models():
-    """
-    Load MedCLIP and MedBLIP models into memory.
-    Called once on server startup — this may take 1-2 minutes on first run
-    as it downloads model weights from HuggingFace.
-    """
+    """Load MedCLIP and MedBLIP into RAM on server startup."""
     try:
         from models.medclip_model import medclip
         medclip.load()

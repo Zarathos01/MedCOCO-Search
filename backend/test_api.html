@@ -1,183 +1,392 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MedCOCO-Search API Tester</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 30px; color: #333; }
-    h1 { text-align: center; margin-bottom: 30px; color: #2d3748; font-size: 24px; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; color: #333; }
 
+    /* ── Top bar ── */
+    .topbar {
+      background: #2d3748; color: white; padding: 14px 30px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar h1 { font-size: 18px; font-weight: bold; }
+    .topbar .user-info { font-size: 13px; display: flex; align-items: center; gap: 12px; }
+    .topbar .user-info span { opacity: 0.8; }
+    .topbar .user-info strong { color: #68d391; }
+
+    /* ── Auth screen ── */
+    #authScreen {
+      min-height: 100vh; display: flex; align-items: center;
+      justify-content: center; padding: 30px;
+    }
+    .auth-box {
+      background: white; border-radius: 16px; padding: 36px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.1); width: 100%; max-width: 420px;
+    }
+    .auth-box h2 { font-size: 22px; color: #2d3748; margin-bottom: 6px; text-align: center; }
+    .auth-box p  { font-size: 13px; color: #718096; text-align: center; margin-bottom: 24px; }
+    .tab-row { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; margin-bottom: 24px; }
+    .tab { flex: 1; padding: 9px; text-align: center; cursor: pointer; font-size: 14px; font-weight: bold; color: #718096; background: #f7fafc; transition: 0.2s; }
+    .tab.active { background: #4299e1; color: white; }
+
+    /* ── Main app screen ── */
+    #appScreen { display: none; padding: 24px 30px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .grid-full { grid-column: 1 / -1; }
 
-    .card {
-      background: white; border-radius: 12px; padding: 24px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    h2 { font-size: 16px; margin-bottom: 16px; color: #4a5568; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+    /* ── Cards ── */
+    .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .card h2 { font-size: 15px; font-weight: bold; margin-bottom: 16px; color: #4a5568; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
 
-    label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 13px; color: #4a5568; }
-    input[type="file"], input[type="text"], input[type="number"] {
-      width: 100%; padding: 9px 12px; border: 1px solid #cbd5e0;
-      border-radius: 8px; font-size: 14px; margin-bottom: 12px; outline: none;
+    /* ── Form elements ── */
+    label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #4a5568; text-transform: uppercase; letter-spacing: 0.4px; }
+    input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="file"] {
+      width: 100%; padding: 9px 12px; border: 1px solid #cbd5e0; border-radius: 8px;
+      font-size: 14px; margin-bottom: 14px; outline: none; background: #f7fafc;
     }
-    input:focus { border-color: #4299e1; }
+    input:focus { border-color: #4299e1; background: white; }
 
-    .btn {
-      border: none; padding: 9px 20px; border-radius: 8px;
-      cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s;
-    }
-    .btn-blue  { background: #4299e1; color: white; }
-    .btn-blue:hover  { background: #3182ce; }
-    .btn-red   { background: #fc8181; color: white; }
-    .btn-red:hover   { background: #e53e3e; }
-    .btn-gray  { background: #e2e8f0; color: #4a5568; }
-    .btn-gray:hover  { background: #cbd5e0; }
+    /* ── Buttons ── */
+    .btn { border: none; padding: 9px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.15s; }
+    .btn-blue   { background: #4299e1; color: white; }
+    .btn-blue:hover   { background: #3182ce; }
+    .btn-red    { background: #fc8181; color: white; }
+    .btn-red:hover    { background: #e53e3e; }
+    .btn-gray   { background: #e2e8f0; color: #4a5568; }
+    .btn-gray:hover   { background: #cbd5e0; }
+    .btn-green  { background: #68d391; color: white; }
+    .btn-green:hover  { background: #48bb78; }
+    .btn-full   { width: 100%; padding: 11px; font-size: 15px; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
+    /* ── Status pills ── */
+    .status { padding: 6px 14px; border-radius: 6px; font-size: 13px; display: inline-block; margin-top: 10px; }
+    .status.ok   { background: #c6f6d5; color: #276749; }
+    .status.err  { background: #fed7d7; color: #9b2c2c; }
+    .status.warn { background: #fefcbf; color: #744210; }
+
+    /* ── Response box ── */
     .response {
       margin-top: 14px; background: #1a202c; color: #68d391;
       padding: 14px; border-radius: 8px; font-family: monospace;
-      font-size: 12px; white-space: pre-wrap; max-height: 200px;
+      font-size: 12px; white-space: pre-wrap; max-height: 180px;
       overflow-y: auto; display: none;
     }
     .response.err { color: #fc8181; }
 
-    .results-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 14px; margin-top: 12px;
-    }
-    .result-card {
-      border: 1px solid #e2e8f0; border-radius: 10px;
-      overflow: hidden; background: #f7fafc; transition: 0.2s;
-    }
+    /* ── Image grids ── */
+    .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 12px; }
+    .result-card { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #f7fafc; }
     .result-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .result-card img { width: 100%; height: 150px; object-fit: cover; }
-    .result-info { padding: 10px; }
-    .score { color: #4299e1; font-weight: bold; font-size: 13px; }
-    .caption { font-size: 12px; color: #4a5568; margin-top: 4px; line-height: 1.4; }
-    .filename { font-size: 11px; color: #a0aec0; margin-top: 4px; }
+    .result-card img { width: 100%; height: 140px; object-fit: cover; }
+    .result-info { padding: 9px; }
+    .score    { color: #4299e1; font-weight: bold; font-size: 12px; }
+    .caption  { font-size: 11px; color: #4a5568; margin-top: 3px; line-height: 1.4; }
+    .filename { font-size: 11px; color: #a0aec0; margin-top: 3px; }
 
-    .history-entry {
-      border: 1px solid #e2e8f0; border-radius: 10px;
-      margin-bottom: 14px; overflow: hidden;
-    }
-    .history-header {
-      background: #edf2f7; padding: 10px 16px;
-      display: flex; justify-content: space-between; align-items: center;
-      cursor: pointer; user-select: none;
-    }
+    /* ── History ── */
+    .history-entry { border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+    .history-header { background: #edf2f7; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
     .history-header:hover { background: #e2e8f0; }
-    .history-header .query-text { font-weight: bold; color: #2d3748; font-size: 14px; }
-    .history-header .meta { font-size: 12px; color: #718096; margin-top: 2px; }
-    .history-header .right { display: flex; align-items: center; gap: 10px; }
-    .history-body { padding: 14px; display: none; }
+    .history-query { font-weight: bold; color: #2d3748; font-size: 13px; }
+    .history-meta  { font-size: 11px; color: #718096; margin-top: 2px; }
+    .history-right { display: flex; align-items: center; gap: 8px; }
+    .history-body  { padding: 14px; display: none; }
     .history-body.open { display: block; }
     .badge { background: #4299e1; color: white; border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: bold; }
-    .no-history { color: #a0aec0; font-size: 14px; text-align: center; padding: 20px; }
+    .no-data { color: #a0aec0; font-size: 13px; text-align: center; padding: 20px 0; }
 
-    .db-id {
-      background: #edf2f7; border-radius: 6px; padding: 6px 10px;
-      font-size: 12px; font-family: monospace; margin-bottom: 6px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
+    /* ── DB list ── */
+    .db-id { background: #edf2f7; border-radius: 6px; padding: 6px 10px; font-size: 11px; font-family: monospace; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
     .db-id span { color: #4a5568; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 78%; }
 
-    .status { padding: 5px 12px; border-radius: 6px; font-size: 13px; display: inline-block; margin-top: 8px; }
-    .status.ok  { background: #c6f6d5; color: #276749; }
-    .status.err { background: #fed7d7; color: #9b2c2c; }
+    #historyCount { font-size: 12px; color: #718096; margin-left: 6px; font-weight: normal; }
 
-    #historyCount { font-size: 12px; color: #718096; margin-left: 8px; font-weight: normal; }
+    /* ── Auth error ── */
+    .auth-err { background: #fed7d7; color: #9b2c2c; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-top: 12px; display: none; }
   </style>
 </head>
 <body>
 
-<h1>🏥 MedCOCO-Search API Tester</h1>
+<!-- ════════════════════════════════════════════════════
+     AUTH SCREEN — shown when not logged in
+════════════════════════════════════════════════════ -->
+<div id="authScreen">
+  <div class="auth-box">
+    <h2>🏥 MedCOCO-Search</h2>
+    <p>Sign in to test the API</p>
 
-<div class="grid">
-
-  <!-- Server -->
-  <div class="card">
-    <h2>⚙️ Server</h2>
-    <label>API Base URL</label>
-    <input type="text" id="baseUrl" value="http://localhost:8000/api/v1" />
-    <div class="btn-row">
-      <button class="btn btn-blue" onclick="checkHealth()">Check Health</button>
+    <div class="tab-row">
+      <div class="tab active" id="tab-login"  onclick="switchAuthTab('login')">Login</div>
+      <div class="tab"        id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</div>
     </div>
-    <div id="healthStatus"></div>
-  </div>
 
-  <!-- Upload -->
-  <div class="card">
-    <h2>📤 Upload Images</h2>
-    <label>Select one or more images</label>
-    <input type="file" id="uploadFiles" multiple accept="image/*" />
-    <div class="btn-row">
-      <button class="btn btn-blue" id="uploadBtn" onclick="uploadImages()">Upload</button>
+    <!-- Login -->
+    <div id="form-login">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')login()"/>
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••" onkeydown="if(event.key==='Enter')login()"/>
+      <button class="btn btn-blue btn-full" id="loginBtn" onclick="login()">Login</button>
     </div>
-    <div class="response" id="uploadResponse"></div>
-  </div>
 
-  <!-- Search -->
-  <div class="card">
-    <h2>🔍 Search</h2>
-    <label>Text Query</label>
-    <input type="text" id="searchQuery" placeholder="e.g. chest x-ray with pneumonia"
-      onkeydown="if(event.key==='Enter') searchImages()" />
-    <label>Top K</label>
-    <input type="number" id="topK" value="3" min="1" max="20" style="width:80px" />
-    <div class="btn-row">
-      <button class="btn btn-blue" id="searchBtn" onclick="searchImages()">Search</button>
-      <button class="btn btn-gray" onclick="clearCurrentResults()">Clear</button>
+    <!-- Signup -->
+    <div id="form-signup" style="display:none">
+      <label>Username</label>
+      <input type="text" id="signupUsername" placeholder="max 8 characters" maxlength="8"/>
+      <label>Email</label>
+      <input type="email" id="signupEmail" placeholder="your@email.com"/>
+      <label>Password</label>
+      <input type="password" id="signupPassword" placeholder="min 6 characters"/>
+      <button class="btn btn-green btn-full" id="signupBtn" onclick="signup()">Create Account</button>
     </div>
-    <div id="currentResults"></div>
-  </div>
 
-  <!-- Database -->
-  <div class="card">
-    <h2>🗄️ Database</h2>
-    <div class="btn-row">
-      <button class="btn btn-blue" onclick="listImages()">Refresh List</button>
-      <button class="btn btn-red" onclick="resetDatabase()">🗑 Reset All</button>
+    <div class="auth-err" id="authErr"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     MAIN APP — shown after login
+════════════════════════════════════════════════════ -->
+<div id="appScreen">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <h1>🏥 MedCOCO-Search API Tester</h1>
+    <div class="user-info">
+      <span>Logged in as <strong id="topbarEmail"></strong></span>
+      <button class="btn btn-gray" style="padding:6px 14px;font-size:13px" onclick="logout()">Logout</button>
     </div>
-    <div id="dbList" style="margin-top:14px; max-height:240px; overflow-y:auto;"></div>
   </div>
 
-  <!-- History -->
-  <div class="card grid-full">
-    <h2 style="display:flex;align-items:center;justify-content:space-between">
-      <span>📜 Search History <span id="historyCount"></span></span>
-      <button class="btn btn-gray" style="font-size:12px;padding:4px 12px" onclick="clearHistory()">Clear All</button>
-    </h2>
-    <div id="historyList"><div class="no-history">No searches yet. Results will appear here after each search.</div></div>
-  </div>
+  <div style="padding:24px 30px">
+    <div class="grid">
 
+      <!-- Server health -->
+      <div class="card">
+        <h2>⚙️ Server</h2>
+        <label>API Base URL</label>
+        <input type="text" id="baseUrl" value="http://localhost:8000/api/v1"/>
+        <div class="btn-row">
+          <button class="btn btn-blue" onclick="checkHealth()">Check Health</button>
+        </div>
+        <div id="healthStatus"></div>
+      </div>
+
+      <!-- Upload -->
+      <div class="card">
+        <h2>📤 Upload Images</h2>
+        <label>Select one or more images</label>
+        <input type="file" id="uploadFiles" multiple accept="image/*"/>
+        <div class="btn-row">
+          <button class="btn btn-blue" id="uploadBtn" onclick="uploadImages()">Upload</button>
+        </div>
+        <div class="response" id="uploadResponse"></div>
+      </div>
+
+      <!-- Search -->
+      <div class="card">
+        <h2>🔍 Search</h2>
+        <label>Text Query</label>
+        <input type="text" id="searchQuery" placeholder="e.g. chest x-ray with pneumonia"
+          onkeydown="if(event.key==='Enter')searchImages()"/>
+        <label>Top K</label>
+        <input type="number" id="topK" value="3" min="1" max="20" style="width:80px"/>
+        <div class="btn-row" style="margin-bottom:12px">
+          <button class="btn btn-blue" id="searchBtn" onclick="searchImages()">Search</button>
+          <button class="btn btn-gray" onclick="clearSearch()">Clear</button>
+        </div>
+        <div id="currentResults"></div>
+      </div>
+
+      <!-- My Images -->
+      <div class="card">
+        <h2>🖼️ My Uploaded Images</h2>
+        <div class="btn-row" style="margin-bottom:12px">
+          <button class="btn btn-blue" onclick="loadMyImages()">Refresh</button>
+        </div>
+        <div id="myImagesList"><div class="no-data">Click Refresh to load your images.</div></div>
+      </div>
+
+      <!-- ChromaDB -->
+      <div class="card">
+        <h2>🗄️ ChromaDB</h2>
+        <div class="btn-row" style="margin-bottom:12px">
+          <button class="btn btn-blue" onclick="listChromaImages()">Refresh List</button>
+          <button class="btn btn-red"  onclick="resetChroma()">🗑 Reset All</button>
+        </div>
+        <div id="chromaList" style="max-height:260px;overflow-y:auto">
+          <div class="no-data">Click Refresh to load.</div>
+        </div>
+      </div>
+
+      <!-- Search History -->
+      <div class="card grid-full">
+        <h2 style="display:flex;align-items:center;justify-content:space-between">
+          <span>📜 Search History<span id="historyCount"></span></span>
+          <button class="btn btn-gray" style="font-size:12px;padding:4px 12px" onclick="clearHistory()">Clear All</button>
+        </h2>
+        <div id="historyList"><div class="no-data">No searches yet.</div></div>
+      </div>
+
+    </div>
+  </div>
 </div>
 
 <script>
+  let accessToken = null;
+  let currentUser = null;
   let searchHistory = [];
 
+  // ── Helpers ───────────────────────────────────────────────────────────
   function getBase() {
     return document.getElementById('baseUrl').value.replace(/\/$/, '');
   }
 
-  // ── Health ──────────────────────────────────────────────────────────
+  function jsonHeaders() {
+    const h = { 'Content-Type': 'application/json' };
+    if (accessToken) h['Authorization'] = `Bearer ${accessToken}`;
+    return h;
+  }
+
+  function fileHeaders() {
+    // No Content-Type for multipart — browser sets it with boundary
+    return accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {};
+  }
+
+  function showResponse(id, data, isError = false) {
+    const el = document.getElementById(id);
+    el.style.display = 'block';
+    el.className = 'response' + (isError ? ' err' : '');
+    el.textContent = JSON.stringify(data, null, 2);
+  }
+
+  function showAuthErr(msg) {
+    const el = document.getElementById('authErr');
+    el.style.display = 'block';
+    el.textContent = '❌ ' + msg;
+  }
+
+  function hideAuthErr() {
+    document.getElementById('authErr').style.display = 'none';
+  }
+
+  // ── Auth tab switch ───────────────────────────────────────────────────
+  function switchAuthTab(tab) {
+    hideAuthErr();
+    document.getElementById('form-login').style.display  = tab === 'login'  ? 'block' : 'none';
+    document.getElementById('form-signup').style.display = tab === 'signup' ? 'block' : 'none';
+    document.getElementById('tab-login').className  = 'tab' + (tab === 'login'  ? ' active' : '');
+    document.getElementById('tab-signup').className = 'tab' + (tab === 'signup' ? ' active' : '');
+  }
+
+  // ── Show/hide screens ─────────────────────────────────────────────────
+  function showApp() {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appScreen').style.display  = 'block';
+    document.getElementById('topbarEmail').textContent  = currentUser?.email || '';
+    checkHealth();
+    loadMyImages();
+    listChromaImages();
+  }
+
+  function showAuth() {
+    document.getElementById('authScreen').style.display = 'flex';
+    document.getElementById('appScreen').style.display  = 'none';
+    accessToken = null;
+    currentUser = null;
+  }
+
+  // ── Signup ────────────────────────────────────────────────────────────
+  async function signup() {
+    hideAuthErr();
+    const username = document.getElementById('signupUsername').value.trim();
+    const email    = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+
+    if (!username || !email || !password) { showAuthErr('Please fill in all fields.'); return; }
+
+    const btn = document.getElementById('signupBtn');
+    btn.disabled = true; btn.textContent = 'Creating account...';
+
+    try {
+      const res  = await fetch(`${getBase()}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password })
+      });
+      const data = await res.json();
+
+      if (!res.ok) { showAuthErr(data.detail || 'Signup failed'); return; }
+
+      accessToken = data.access_token;
+      currentUser = data.user;
+      showApp();
+    } catch (e) {
+      showAuthErr('Could not reach server. Is uvicorn running?');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Create Account';
+    }
+  }
+
+  // ── Login ─────────────────────────────────────────────────────────────
+  async function login() {
+    hideAuthErr();
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) { showAuthErr('Please enter email and password.'); return; }
+
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = 'Logging in...';
+
+    try {
+      const res  = await fetch(`${getBase()}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+
+      if (!res.ok) { showAuthErr(data.detail || 'Login failed'); return; }
+
+      accessToken = data.access_token;
+      currentUser = data.user;
+      showApp();
+    } catch (e) {
+      showAuthErr('Could not reach server. Is uvicorn running?');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Login';
+    }
+  }
+
+  // ── Logout ────────────────────────────────────────────────────────────
+  async function logout() {
+    try {
+      await fetch(`${getBase()}/auth/logout`, { headers: jsonHeaders() });
+    } catch {}
+    showAuth();
+  }
+
+  // ── Health ────────────────────────────────────────────────────────────
   async function checkHealth() {
     try {
-      const res = await fetch(`${getBase()}/health`);
+      const res  = await fetch(`${getBase()}/health`);
       const data = await res.json();
       document.getElementById('healthStatus').innerHTML =
         `<div class="status ok">✅ ${data.message}</div>`;
     } catch {
       document.getElementById('healthStatus').innerHTML =
-        `<div class="status err">❌ Server not reachable. Is uvicorn running?</div>`;
+        `<div class="status err">❌ Server not reachable</div>`;
     }
   }
 
-  // ── Upload ──────────────────────────────────────────────────────────
+  // ── Upload ────────────────────────────────────────────────────────────
   async function uploadImages() {
     const files = document.getElementById('uploadFiles').files;
     if (!files.length) { alert('Please select at least one image.'); return; }
@@ -189,10 +398,12 @@
     for (const file of files) formData.append('files', file);
 
     try {
-      const res = await fetch(`${getBase()}/upload`, { method: 'POST', body: formData });
+      const res  = await fetch(`${getBase()}/upload`, {
+        method: 'POST', headers: fileHeaders(), body: formData
+      });
       const data = await res.json();
       showResponse('uploadResponse', data, !res.ok);
-      if (res.ok) listImages();
+      if (res.ok) { loadMyImages(); listChromaImages(); }
     } catch (e) {
       showResponse('uploadResponse', { error: e.message }, true);
     } finally {
@@ -200,7 +411,7 @@
     }
   }
 
-  // ── Search ──────────────────────────────────────────────────────────
+  // ── Search ────────────────────────────────────────────────────────────
   async function searchImages() {
     const query = document.getElementById('searchQuery').value.trim();
     const topK  = parseInt(document.getElementById('topK').value);
@@ -210,9 +421,8 @@
     btn.disabled = true; btn.textContent = 'Searching...';
 
     try {
-      const res = await fetch(`${getBase()}/search`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res  = await fetch(`${getBase()}/search`, {
+        method: 'POST', headers: jsonHeaders(),
         body: JSON.stringify({ query, top_k: topK })
       });
       const data = await res.json();
@@ -223,12 +433,8 @@
         return;
       }
 
-      // Show in current results area
       renderCurrentResults(data);
-
-      // Move previous current results to history, add new entry
       addToHistory(data);
-
     } catch (e) {
       document.getElementById('currentResults').innerHTML =
         `<div class="status err">❌ ${e.message}</div>`;
@@ -238,23 +444,22 @@
   }
 
   function renderCurrentResults(data) {
-    const container = document.getElementById('currentResults');
-    if (!data.results || data.results.length === 0) {
-      container.innerHTML = `<div class="status err" style="margin-top:12px">No results found. Upload images first.</div>`;
+    const el = document.getElementById('currentResults');
+    if (!data.results || !data.results.length) {
+      el.innerHTML = `<div class="status err">No results found. Upload images first.</div>`;
       return;
     }
-    container.innerHTML = `
-      <p style="margin-top:12px;font-size:13px;color:#4a5568;">
+    el.innerHTML = `
+      <p style="font-size:13px;color:#4a5568;margin-bottom:4px">
         <b>${data.count}</b> result(s) for: <i>"${data.query}"</i>
       </p>
-      <div class="results-grid">${data.results.map(r => resultCardHTML(r)).join('')}</div>
-    `;
+      <div class="results-grid">${data.results.map(resultCardHTML).join('')}</div>`;
   }
 
   function resultCardHTML(r) {
     return `
       <div class="result-card">
-        <img src="data:image/jpeg;base64,${r.image_b64}" alt="${r.filename}" />
+        <img src="data:image/jpeg;base64,${r.image_b64}" alt="${r.filename}"/>
         <div class="result-info">
           <div class="score">Score: ${(r.similarity_score * 100).toFixed(1)}%</div>
           <div class="caption">${r.caption}</div>
@@ -263,12 +468,91 @@
       </div>`;
   }
 
-  function clearCurrentResults() {
+  function clearSearch() {
     document.getElementById('currentResults').innerHTML = '';
     document.getElementById('searchQuery').value = '';
   }
 
-  // ── History ─────────────────────────────────────────────────────────
+  // ── My Images ─────────────────────────────────────────────────────────
+  async function loadMyImages() {
+    const el = document.getElementById('myImagesList');
+    try {
+      const res  = await fetch(`${getBase()}/my-images`, { headers: jsonHeaders() });
+      const data = await res.json();
+
+      if (!data.images || !data.images.length) {
+        el.innerHTML = `<div class="no-data">No images uploaded yet.</div>`;
+        return;
+      }
+
+      el.innerHTML = `
+        <p style="font-size:13px;color:#4a5568;margin-bottom:8px">
+          Total: <b>${data.total}</b> image(s)
+        </p>
+        <div class="results-grid">
+          ${data.images.map(img => `
+            <div class="result-card">
+              <img src="data:image/jpeg;base64,${img.image_b64}" alt="${img.filename}"/>
+              <div class="result-info">
+                <div class="filename">${img.filename}</div>
+                <div style="font-size:10px;color:#a0aec0">ID: ${img.id}</div>
+              </div>
+            </div>`).join('')}
+        </div>`;
+    } catch (e) {
+      el.innerHTML = `<div class="status err">❌ ${e.message}</div>`;
+    }
+  }
+
+  // ── ChromaDB ──────────────────────────────────────────────────────────
+  async function listChromaImages() {
+    const el = document.getElementById('chromaList');
+    try {
+      const res  = await fetch(`${getBase()}/images`, { headers: jsonHeaders() });
+      const data = await res.json();
+
+      if (!data.image_ids || !data.image_ids.length) {
+        el.innerHTML = `<div class="no-data">No embeddings in ChromaDB.</div>`;
+        return;
+      }
+
+      el.innerHTML = `
+        <p style="font-size:13px;color:#4a5568;margin-bottom:8px">
+          Total: <b>${data.total}</b> embedding(s)
+        </p>` +
+        data.image_ids.map(id => `
+          <div class="db-id">
+            <span title="${id}">${id}</span>
+            <button class="btn btn-red" style="padding:3px 10px;font-size:11px"
+              onclick="deleteChromaImage('${id}')">Delete</button>
+          </div>`).join('');
+    } catch (e) {
+      el.innerHTML = `<div class="status err">❌ ${e.message}</div>`;
+    }
+  }
+
+  async function deleteChromaImage(id) {
+    if (!confirm(`Delete embedding\n${id}?`)) return;
+    try {
+      await fetch(`${getBase()}/images/${id}`, { method: 'DELETE', headers: jsonHeaders() });
+      listChromaImages();
+    } catch (e) { alert('Delete failed: ' + e.message); }
+  }
+
+  async function resetChroma() {
+    if (!confirm('Delete ALL embeddings from ChromaDB?\nThis cannot be undone.')) return;
+    try {
+      const res  = await fetch(`${getBase()}/images`, { headers: jsonHeaders() });
+      const data = await res.json();
+      for (const id of (data.image_ids || [])) {
+        await fetch(`${getBase()}/images/${id}`, { method: 'DELETE', headers: jsonHeaders() });
+      }
+      listChromaImages();
+      alert(`✅ ChromaDB reset. ${data.image_ids?.length || 0} embedding(s) deleted.`);
+    } catch (e) { alert('Reset failed: ' + e.message); }
+  }
+
+  // ── History ───────────────────────────────────────────────────────────
   function addToHistory(data) {
     searchHistory.unshift({
       id: Date.now(),
@@ -281,117 +565,47 @@
   }
 
   function renderHistory() {
-    const list  = document.getElementById('historyList');
-    const count = document.getElementById('historyCount');
-    count.textContent = `(${searchHistory.length})`;
+    const el = document.getElementById('historyList');
+    document.getElementById('historyCount').textContent = ` (${searchHistory.length})`;
 
     if (!searchHistory.length) {
-      list.innerHTML = '<div class="no-history">No searches yet. Results will appear here after each search.</div>';
-      return;
+      el.innerHTML = '<div class="no-data">No searches yet.</div>'; return;
     }
 
-    list.innerHTML = searchHistory.map(entry => `
+    el.innerHTML = searchHistory.map(entry => `
       <div class="history-entry">
         <div class="history-header" onclick="toggleHistory(${entry.id})">
           <div>
-            <div class="query-text">🔍 "${entry.query}"</div>
-            <div class="meta">🕐 ${entry.time}</div>
+            <div class="history-query">🔍 "${entry.query}"</div>
+            <div class="history-meta">🕐 ${entry.time}</div>
           </div>
-          <div class="right">
+          <div class="history-right">
             <span class="badge">${entry.count} result(s)</span>
             <button class="btn btn-red" style="padding:4px 10px;font-size:12px"
-              onclick="event.stopPropagation(); deleteHistoryEntry(${entry.id})">✕</button>
+              onclick="event.stopPropagation();deleteHistory(${entry.id})">✕</button>
           </div>
         </div>
         <div class="history-body" id="hist-${entry.id}">
           ${entry.results.length
-            ? `<div class="results-grid">${entry.results.map(r => resultCardHTML(r)).join('')}</div>`
-            : `<div class="no-history">No results for this query.</div>`}
+            ? `<div class="results-grid">${entry.results.map(resultCardHTML).join('')}</div>`
+            : `<div class="no-data">No results.</div>`}
         </div>
-      </div>
-    `).join('');
+      </div>`).join('');
   }
 
   function toggleHistory(id) {
-    const body = document.getElementById(`hist-${id}`);
-    body.classList.toggle('open');
+    document.getElementById(`hist-${id}`).classList.toggle('open');
   }
 
-  function deleteHistoryEntry(id) {
+  function deleteHistory(id) {
     searchHistory = searchHistory.filter(e => e.id !== id);
     renderHistory();
   }
 
   function clearHistory() {
     if (!searchHistory.length) return;
-    if (confirm('Clear all search history?')) {
-      searchHistory = [];
-      renderHistory();
-    }
+    if (confirm('Clear all search history?')) { searchHistory = []; renderHistory(); }
   }
-
-  // ── Database ─────────────────────────────────────────────────────────
-  async function listImages() {
-    try {
-      const res  = await fetch(`${getBase()}/images`);
-      const data = await res.json();
-      const list = document.getElementById('dbList');
-
-      if (!data.image_ids || data.image_ids.length === 0) {
-        list.innerHTML = '<div class="no-history">No images in database.</div>';
-        return;
-      }
-
-      list.innerHTML = `
-        <p style="font-size:13px;color:#4a5568;margin-bottom:10px">
-          Total: <b>${data.total}</b> image(s)
-        </p>` +
-        data.image_ids.map(id => `
-          <div class="db-id">
-            <span title="${id}">${id}</span>
-            <button class="btn btn-red" style="padding:3px 10px;font-size:11px"
-              onclick="deleteImage('${id}')">Delete</button>
-          </div>`).join('');
-    } catch (e) {
-      document.getElementById('dbList').innerHTML =
-        `<div class="status err">❌ ${e.message}</div>`;
-    }
-  }
-
-  async function deleteImage(id) {
-    if (!confirm(`Delete image\n${id}?`)) return;
-    try {
-      await fetch(`${getBase()}/images/${id}`, { method: 'DELETE' });
-      listImages();
-    } catch (e) {
-      alert('Delete failed: ' + e.message);
-    }
-  }
-
-  async function resetDatabase() {
-    if (!confirm('Delete ALL images from the database?\nThis cannot be undone.')) return;
-    try {
-      const res  = await fetch(`${getBase()}/images`);
-      const data = await res.json();
-      for (const id of (data.image_ids || [])) {
-        await fetch(`${getBase()}/images/${id}`, { method: 'DELETE' });
-      }
-      listImages();
-      alert(`✅ Database reset. ${data.image_ids?.length || 0} image(s) deleted.`);
-    } catch (e) {
-      alert('Reset failed: ' + e.message);
-    }
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────
-  function showResponse(id, data, isError = false) {
-    const el = document.getElementById(id);
-    el.style.display = 'block';
-    el.className = 'response' + (isError ? ' err' : '');
-    el.textContent = JSON.stringify(data, null, 2);
-  }
-
-  window.onload = () => { checkHealth(); listImages(); };
 </script>
 </body>
 </html>

@@ -2,45 +2,54 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import router
+from api.routes import router as ai_router
+from auth.routers import auth_router
 from core.startup import load_models
+from db.sql_main import init_db
 
 
-# ─── Lifespan (replaces deprecated on_event) ────────────────────────────────────
+# ── Lifespan ──────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load models when the server starts up."""
+    # 1. Initialize PostgreSQL tables
+    await init_db()
+    # 2. Load AI models into RAM
     load_models()
     yield
-    # Cleanup (if needed) goes here
 
 
-# ─── App ─────────────────────────────────────────────────────────────────────────
+# ── App ───────────────────────────────────────────────────
 app = FastAPI(
     title="MedCOCO-Search API",
-    description="Upload medical images, search by text using MedCLIP, get captions via MedBLIP.",
-    version="1.0.0",
+    description="Medical image search using MedCLIP + MedBLIP with user authentication.",
+    version="2.0.0",
     lifespan=lifespan
 )
 
-# ─── CORS (allow mobile app to connect) ─────────────────────────────────────────
+# ── CORS ──────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Restrict to your mobile app's domain in production
+    allow_origins=["*"],  # restrict to your app domain in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ─── Routes ──────────────────────────────────────────────────────────────────────
-app.include_router(router, prefix="/api/v1")
+# ── Routers ───────────────────────────────────────────────
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(ai_router,   prefix="/api/v1",      tags=["Images", "Search"])
 
 
-# ─── Root ────────────────────────────────────────────────────────────────────────
+# ── Root ──────────────────────────────────────────────────
 @app.get("/")
 def root():
     return {
-        "message": "MedCOCO-Search API",
+        "message": "MedCOCO-Search API v2",
         "docs": "/docs",
-        "health": "/api/v1/health"
+        "endpoints": {
+            "auth":   "/api/v1/auth",
+            "upload": "/api/v1/upload",
+            "search": "/api/v1/search",
+            "health": "/api/v1/health"
+        }
     }
