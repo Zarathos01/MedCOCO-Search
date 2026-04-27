@@ -1,8 +1,9 @@
-import uuid
-from datetime import datetime
+from pydantic import BaseModel,Field, EmailStr
+import uuid 
 from typing import List
+from datetime import datetime
 
-from pydantic import BaseModel, Field, EmailStr
+
 
 
 class UserCreateModel(BaseModel):
@@ -16,22 +17,30 @@ class UserModel(BaseModel):
     username: str
     email: str
     password_hash: str = Field(exclude=True)
-    is_verified: bool
-
+    is_verified: bool 
 
 class UserLoginModel(BaseModel):
     email: str = Field(max_length=40)
     password: str = Field(min_length=6)
 
 
-class EmailModel(BaseModel):
-    addresses: List[str]
 
+class EmailModel(BaseModel):
+    addresses : List[str]
 
 class OtpCreateModel(BaseModel):
     email: str
     otp: str
     expires_at: datetime
+
+
+class PasswordResetRequestModel(BaseModel):
+    email: str
+
+
+class PasswordResetConfirmModel(BaseModel):
+    new_password: str
+    confirm_new_password: str
 
 
 class ForgotPasswordRequestModel(BaseModel):

@@ -27,6 +27,7 @@ redis
 fastapi-mail
 celery
 aiosmtplib
+asgiref
 
 # ── AI Models ─────────────────────────────────────────────
 torch

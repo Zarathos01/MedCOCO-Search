@@ -109,6 +109,23 @@
 
     /* ── Auth error ── */
     .auth-err { background: #fed7d7; color: #9b2c2c; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-top: 12px; display: none; }
+
+    /* ── Progress bar ── */
+    .progress-wrap { margin-top: 14px; display: none; }
+    .progress-label { font-size: 12px; color: #4a5568; margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .progress-track { background: #e2e8f0; border-radius: 99px; height: 8px; overflow: hidden; }
+    .progress-bar {
+      height: 100%; border-radius: 99px; background: #4299e1;
+      width: 0%; transition: width 0.3s ease;
+    }
+    .progress-bar.indeterminate {
+      width: 40%;
+      animation: indeterminate 1.2s ease-in-out infinite;
+    }
+    @keyframes indeterminate {
+      0%   { margin-left: -40%; }
+      100% { margin-left: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -186,6 +203,15 @@
         <div class="btn-row">
           <button class="btn btn-blue" id="uploadBtn" onclick="uploadImages()">Upload</button>
         </div>
+        <div class="progress-wrap" id="uploadProgress">
+          <div class="progress-label">
+            <span id="uploadProgressText">Uploading...</span>
+            <span id="uploadProgressPct"></span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" id="uploadProgressBar"></div>
+          </div>
+        </div>
         <div class="response" id="uploadResponse"></div>
       </div>
 
@@ -200,6 +226,14 @@
         <div class="btn-row" style="margin-bottom:12px">
           <button class="btn btn-blue" id="searchBtn" onclick="searchImages()">Search</button>
           <button class="btn btn-gray" onclick="clearSearch()">Clear</button>
+        </div>
+        <div class="progress-wrap" id="searchProgress">
+          <div class="progress-label">
+            <span id="searchProgressText">Searching...</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar indeterminate" id="searchProgressBar"></div>
+          </div>
         </div>
         <div id="currentResults"></div>
       </div>
@@ -239,9 +273,9 @@
 </div>
 
 <script>
-  let accessToken = null;
-  let currentUser = null;
-  let searchHistory = [];
+  let accessToken = localStorage.getItem('accessToken') || null;
+  let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+  let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
 
   // ── Helpers ───────────────────────────────────────────────────────────
   function getBase() {
@@ -298,8 +332,13 @@
   function showAuth() {
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('appScreen').style.display  = 'none';
-    accessToken = null;
-    currentUser = null;
+    accessToken   = null;
+    currentUser   = null;
+    searchHistory = [];
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('searchHistory');
+    localStorage.removeItem('currentResults');
   }
 
   // ── Signup ────────────────────────────────────────────────────────────
@@ -326,6 +365,8 @@
 
       accessToken = data.access_token;
       currentUser = data.user;
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
       showApp();
     } catch (e) {
       showAuthErr('Could not reach server. Is uvicorn running?');
@@ -357,6 +398,8 @@
 
       accessToken = data.access_token;
       currentUser = data.user;
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
       showApp();
     } catch (e) {
       showAuthErr('Could not reach server. Is uvicorn running?');
@@ -370,6 +413,13 @@
     try {
       await fetch(`${getBase()}/auth/logout`, { headers: jsonHeaders() });
     } catch {}
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('searchHistory');   // ← clear history on logout
+    localStorage.removeItem('currentResults');  // ← clear results on logout
+    accessToken = null;
+    currentUser = null;
+    searchHistory = [];
     showAuth();
   }
 
@@ -391,23 +441,65 @@
     const files = document.getElementById('uploadFiles').files;
     if (!files.length) { alert('Please select at least one image.'); return; }
 
-    const btn = document.getElementById('uploadBtn');
-    btn.disabled = true; btn.textContent = 'Uploading...';
+    const btn      = document.getElementById('uploadBtn');
+    const progress = document.getElementById('uploadProgress');
+    const bar      = document.getElementById('uploadProgressBar');
+    const label    = document.getElementById('uploadProgressText');
+    const pct      = document.getElementById('uploadProgressPct');
 
+    btn.disabled = true; btn.textContent = 'Uploading...';
+    progress.style.display = 'block';
+    bar.style.width = '0%';
+
+    const total = files.length;
     const formData = new FormData();
     for (const file of files) formData.append('files', file);
+
+    // Simulate per-file progress while waiting for server
+    let simulated = 0;
+    const step = 80 / total;
+    const interval = setInterval(() => {
+      if (simulated < 80) {
+        simulated += step / 4;
+        bar.style.width = simulated + '%';
+        const filesDone = Math.floor((simulated / 80) * total);
+        label.textContent = `Uploading ${Math.min(filesDone + 1, total)} of ${total} image(s)...`;
+        pct.textContent = Math.round(simulated) + '%';
+      }
+    }, 300);
 
     try {
       const res  = await fetch(`${getBase()}/upload`, {
         method: 'POST', headers: fileHeaders(), body: formData
       });
+      clearInterval(interval);
+      bar.style.width = '100%';
+      pct.textContent = '100%';
+      label.textContent = 'Upload complete';
+
       const data = await res.json();
       showResponse('uploadResponse', data, !res.ok);
-      if (res.ok) { loadMyImages(); listChromaImages(); }
+      if (res.ok) {
+        // Save current search results before refreshing so they don't disappear
+        const savedResults = document.getElementById('currentResults').innerHTML;
+        await loadMyImages();
+        await listChromaImages();
+        // Restore search results after refresh
+        document.getElementById('currentResults').innerHTML = savedResults;
+      }
+      // Note: intentionally NOT clearing currentResults or history on upload
     } catch (e) {
+      clearInterval(interval);
+      label.textContent = 'Upload failed';
+      bar.style.background = '#fc8181';
       showResponse('uploadResponse', { error: e.message }, true);
     } finally {
       btn.disabled = false; btn.textContent = 'Upload';
+      setTimeout(() => {
+        progress.style.display = 'none';
+        bar.style.width = '0%';
+        bar.style.background = '#4299e1';
+      }, 2000);
     }
   }
 
@@ -417,8 +509,27 @@
     const topK  = parseInt(document.getElementById('topK').value);
     if (!query) { alert('Please enter a search query.'); return; }
 
-    const btn = document.getElementById('searchBtn');
+    const btn      = document.getElementById('searchBtn');
+    const progress = document.getElementById('searchProgress');
+    const bar      = document.getElementById('searchProgressBar');
+    const label    = document.getElementById('searchProgressText');
+
     btn.disabled = true; btn.textContent = 'Searching...';
+    progress.style.display = 'block';
+
+    // Step labels to show what the server is doing
+    const steps = [
+      'Embedding query with MedCLIP...',
+      'Searching ChromaDB for similar images...',
+      'Generating captions with MedBLIP...',
+      'Almost done...'
+    ];
+    let stepIdx = 0;
+    label.textContent = steps[0];
+    const stepInterval = setInterval(() => {
+      stepIdx = Math.min(stepIdx + 1, steps.length - 1);
+      label.textContent = steps[stepIdx];
+    }, 1800);
 
     try {
       const res  = await fetch(`${getBase()}/search`, {
@@ -426,6 +537,7 @@
         body: JSON.stringify({ query, top_k: topK })
       });
       const data = await res.json();
+      clearInterval(stepInterval);
 
       if (!res.ok) {
         document.getElementById('currentResults').innerHTML =
@@ -435,11 +547,16 @@
 
       renderCurrentResults(data);
       addToHistory(data);
+      // Persist current results so they survive page refresh
+      localStorage.setItem('currentResults', JSON.stringify(data));
     } catch (e) {
+      clearInterval(stepInterval);
       document.getElementById('currentResults').innerHTML =
         `<div class="status err">❌ ${e.message}</div>`;
     } finally {
       btn.disabled = false; btn.textContent = 'Search';
+      progress.style.display = 'none';
+      bar.className = 'progress-bar indeterminate';
     }
   }
 
@@ -449,19 +566,24 @@
       el.innerHTML = `<div class="status err">No results found. Upload images first.</div>`;
       return;
     }
+    // Sort highest score first
+    const sorted = [...data.results].sort((a, b) => b.similarity_score - a.similarity_score);
     el.innerHTML = `
       <p style="font-size:13px;color:#4a5568;margin-bottom:4px">
         <b>${data.count}</b> result(s) for: <i>"${data.query}"</i>
       </p>
-      <div class="results-grid">${data.results.map(resultCardHTML).join('')}</div>`;
+      <div class="results-grid">${sorted.map(resultCardHTML).join('')}</div>`;
   }
 
   function resultCardHTML(r) {
+    // Add 0.5 to raw cosine similarity to make scores more intuitive, cap at 100%
+    const displayScore = Math.min((r.similarity_score + 0.5) * 100, 100).toFixed(1);
     return `
       <div class="result-card">
-        <img src="data:image/jpeg;base64,${r.image_b64}" alt="${r.filename}"/>
+        <img src="${r.file_url}" alt="${r.filename}"
+          onerror="this.alt='Image not found'"/>
         <div class="result-info">
-          <div class="score">Score: ${(r.similarity_score * 100).toFixed(1)}%</div>
+          <div class="score">Score: ${displayScore}%</div>
           <div class="caption">${r.caption}</div>
           <div class="filename">${r.filename}</div>
         </div>
@@ -491,16 +613,39 @@
         </p>
         <div class="results-grid">
           ${data.images.map(img => `
-            <div class="result-card">
-              <img src="data:image/jpeg;base64,${img.image_b64}" alt="${img.filename}"/>
+            <div class="result-card" id="card-${img.image_id}">
+              <img src="${img.file_url}" alt="${img.filename}"
+                onerror="this.src='';this.alt='Image not found'"/>
               <div class="result-info">
-                <div class="filename">${img.filename}</div>
-                <div style="font-size:10px;color:#a0aec0">ID: ${img.id}</div>
+                <button class="btn btn-red"
+                  style="width:100%;margin-top:6px;padding:5px;font-size:11px"
+                  onclick="deleteMyImage('${img.image_id}')">🗑 Delete</button>
               </div>
             </div>`).join('')}
         </div>`;
     } catch (e) {
       el.innerHTML = `<div class="status err">❌ ${e.message}</div>`;
+    }
+  }
+
+  async function deleteMyImage(imageId) {
+    if (!confirm('Delete this image and its embedding?')) return;
+    try {
+      const res = await fetch(`${getBase()}/images/${imageId}`, {
+        method: 'DELETE', headers: jsonHeaders()
+      });
+      if (res.ok) {
+        // Remove card from UI instantly without full reload
+        const card = document.getElementById(`card-${imageId}`);
+        if (card) card.remove();
+        // Also refresh ChromaDB list
+        listChromaImages();
+      } else {
+        const data = await res.json();
+        alert('Delete failed: ' + (data.detail || 'Unknown error'));
+      }
+    } catch (e) {
+      alert('Delete failed: ' + e.message);
     }
   }
 
@@ -540,15 +685,15 @@
   }
 
   async function resetChroma() {
-    if (!confirm('Delete ALL embeddings from ChromaDB?\nThis cannot be undone.')) return;
+    if (!confirm('Delete ALL your images and embeddings?\nThis cannot be undone.')) return;
     try {
-      const res  = await fetch(`${getBase()}/images`, { headers: jsonHeaders() });
+      const res  = await fetch(`${getBase()}/reset`, {
+        method: 'DELETE', headers: jsonHeaders()
+      });
       const data = await res.json();
-      for (const id of (data.image_ids || [])) {
-        await fetch(`${getBase()}/images/${id}`, { method: 'DELETE', headers: jsonHeaders() });
-      }
       listChromaImages();
-      alert(`✅ ChromaDB reset. ${data.image_ids?.length || 0} embedding(s) deleted.`);
+      loadMyImages();
+      alert(`✅ ${data.message}\nDeleted: ${data.deleted} image(s)`);
     } catch (e) { alert('Reset failed: ' + e.message); }
   }
 
@@ -561,6 +706,8 @@
       time: new Date().toLocaleTimeString(),
       results: data.results || []
     });
+    // Persist to localStorage so it survives page refresh
+    localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
     renderHistory();
   }
 
@@ -571,6 +718,13 @@
     if (!searchHistory.length) {
       el.innerHTML = '<div class="no-data">No searches yet.</div>'; return;
     }
+
+    // Remember which entries were open before re-render
+    const openIds = new Set(
+      searchHistory
+        .map(e => e.id)
+        .filter(id => document.getElementById(`hist-${id}`)?.classList.contains('open'))
+    );
 
     el.innerHTML = searchHistory.map(entry => `
       <div class="history-entry">
@@ -585,7 +739,7 @@
               onclick="event.stopPropagation();deleteHistory(${entry.id})">✕</button>
           </div>
         </div>
-        <div class="history-body" id="hist-${entry.id}">
+        <div class="history-body ${openIds.has(entry.id) ? 'open' : ''}" id="hist-${entry.id}">
           ${entry.results.length
             ? `<div class="results-grid">${entry.results.map(resultCardHTML).join('')}</div>`
             : `<div class="no-data">No results.</div>`}
@@ -606,6 +760,24 @@
     if (!searchHistory.length) return;
     if (confirm('Clear all search history?')) { searchHistory = []; renderHistory(); }
   }
+
+  // ── Auto-login on page load ───────────────────────────────────────────
+  window.onload = () => {
+    if (accessToken && currentUser) {
+      showApp();
+      // Restore search history from localStorage
+      const savedHistory = localStorage.getItem('searchHistory');
+      if (savedHistory) {
+        searchHistory = JSON.parse(savedHistory);
+        renderHistory();
+      }
+      // Restore last search results from localStorage
+      const savedResults = localStorage.getItem('currentResults');
+      if (savedResults) {
+        renderCurrentResults(JSON.parse(savedResults));
+      }
+    }
+  };
 </script>
 </body>
 </html>

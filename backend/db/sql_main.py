@@ -2,7 +2,7 @@ from sqlmodel import create_engine, SQLModel
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker
-
+from typing import AsyncGenerator
 from config import Config
 
 engine = AsyncEngine(
@@ -19,7 +19,7 @@ async def init_db():
         await conn.run_sync(SQLModel.metadata.create_all)
 
 
-async def get_session() -> AsyncSession:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency — yields a DB session per request."""
     Session = sessionmaker(
         bind=engine,

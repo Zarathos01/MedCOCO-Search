@@ -35,35 +35,58 @@ async def send_mail(emails: EmailModel):
     return {"message": "Email sent successfully"}
 
 
-@auth_router.post("/signup", response_model=UserModel, status_code=status.HTTP_201_CREATED)
+@auth_router.post(
+    "/signup",
+    response_model=UserModel,
+    status_code=status.HTTP_201_CREATED
+)
 async def create_account(
     user_data: UserCreateModel,
     session: AsyncSession = Depends(get_session),
 ):
-    email = user_data.email
-    user_exists = await user_service.user_exists(email, session)
+    email = user_data.email 
 
-    if user_exists:
+    user_exist = await user_service.user_exists(email, session)
+
+    if user_exist:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User with this email already exists"
+            detail="User email already exists"
         )
 
     new_user = await user_service.create_user(user_data, session)
 
     access_token = create_access_token(
-        user_data={"email": new_user.email, "user_uid": str(new_user.uid)}
+        user_data={
+            "email": new_user.email,
+            "user_uid": str(new_user.uid)
+        }
     )
+
     refresh_token = create_access_token(
-        user_data={"email": new_user.email, "user_uid": str(new_user.uid)},
+        user_data={
+            "email": new_user.email,
+            "user_uid": str(new_user.uid)
+        },
         refresh=True,
         expiry=timedelta(days=REFRESH_TOKEN_EXPIRY_DAYS)
     )
 
+    subject = "Welcome to MedCOCO Search"
+    html = f"""
+    <h1>Welcome {new_user.email}</h1>
+    <p>Thanks for signing up 🎉</p>
+    """
+
+    send_email.delay(
+        [new_user.email],   # recipients
+        subject,
+        html
+    )
+
     return JSONResponse(
-        status_code=status.HTTP_201_CREATED,
         content={
-            "message": "Account created successfully",
+            "message": "Signup successful",
             "access_token": access_token,
             "refresh_token": refresh_token,
             "user": {
@@ -110,9 +133,10 @@ async def get_new_access_token(token_details: dict = Depends(RefreshTokenBearer(
 
     if datetime.fromtimestamp(expiry_timestamp) > datetime.now():
         new_access_token = create_access_token(user_data=token_details["user"])
+
         return JSONResponse(content={"access_token": new_access_token})
 
-    raise InvalidToken()
+    raise InvalidToken
 
 
 @auth_router.post("/password-reset-request")
@@ -192,3 +216,5 @@ async def get_current_user_info(current_user: Users = Depends(get_current_user))
         "username": current_user.username,
         "is_verified": current_user.is_verified
     }
+    
+

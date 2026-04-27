@@ -1,6 +1,6 @@
 from typing import Any, List
 
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer
 from fastapi.security.http import HTTPAuthorizationCredentials
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -27,7 +27,9 @@ class TokenBearer(HTTPBearer):
 
     async def __call__(self, request: Request) -> HTTPAuthorizationCredentials | None:
         creds = await super().__call__(request)
+
         token = creds.credentials
+
         token_data = decode_token(token)
 
         if not self.token_valid(token):
@@ -37,13 +39,16 @@ class TokenBearer(HTTPBearer):
             raise InvalidToken()
 
         self.verify_token_data(token_data)
+
         return token_data
 
     def token_valid(self, token: str) -> bool:
-        return decode_token(token) is not None
+        token_data = decode_token(token)
+
+        return token_data is not None
 
     def verify_token_data(self, token_data):
-        raise NotImplementedError("Please override this method in child classes")
+        raise NotImplementedError("Please Override this method in child classes")
 
 
 class AccessTokenBearer(TokenBearer):
@@ -62,10 +67,30 @@ async def get_current_user(
     token_details: dict = Depends(AccessTokenBearer()),
     session: AsyncSession = Depends(get_session),
 ):
-    """FastAPI dependency — returns the currently authenticated user."""
-    user_email = token_details["user"]["email"]
+    print("Token details:", token_details)  # debug
+    if token_details is None:
+        raise HTTPException(status_code=401, detail="Token missing or invalid")
+    
+    user_email = token_details.get("user", {}).get("email")
+    print("Email from token:", user_email)
+
     user = await user_service.get_user_by_email(user_email, session)
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+
     return user
+
+
+
+# async def get_current_user(
+#     token_details: dict = Depends(AccessTokenBearer()),
+#     session: AsyncSession = Depends(get_session),
+# ):
+#     user_email = token_details["user"]["email"]
+
+#     user = await user_service.get_user_by_email(user_email, session)
+
+#     return user
 
 
 class RoleChecker:
@@ -77,4 +102,5 @@ class RoleChecker:
             raise AccountNotVerified()
         if current_user.role in self.allowed_roles:
             return True
+
         raise InsufficientPermission()

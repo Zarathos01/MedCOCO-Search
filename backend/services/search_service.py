@@ -1,56 +1,86 @@
-import base64
-from io import BytesIO
+import os
 from PIL import Image
 
 from models.medclip_model import medclip
 from models.medblip_model import medblip
 from db.chroma_client import search_images
 from config import TOP_K
+from services.upload_service import UPLOAD_DIR
 
 
-def base64_to_image(b64_string: str) -> Image.Image:
-    """Convert base64 string back to PIL image."""
-    image_data = base64.b64decode(b64_string)
-    return Image.open(BytesIO(image_data)).convert("RGB")
+def load_image_from_disk(saved_filename: str) -> Image.Image:
+    """Load a PIL image directly from disk."""
+    file_path = os.path.join(UPLOAD_DIR, saved_filename)
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Image file not found: {saved_filename}")
+    return Image.open(file_path).convert("RGB")
 
 
-async def search_and_caption(query: str, top_k: int = TOP_K) -> dict:
+async def search_and_caption(
+    query: str,
+    owner_id: str,
+    top_k: int = TOP_K,
+    server_base_url: str = ""
+) -> dict:
     """
     Full pipeline:
-    1. Embed the text query using MedCLIP
+    1. Embed text query with MedCLIP
     2. Retrieve top_k most similar images from ChromaDB
-    3. Caption each retrieved image using MedBLIP
-    4. Return results with images + captions + similarity scores
+    3. Filter results to only include images owned by the current user
+    4. Load each image from disk and caption with MedBLIP
+    5. Sort highest score first
     """
     # Step 1: Embed query
     query_embedding = medclip.embed_text(query)
 
-    # Step 2: Retrieve from ChromaDB
-    retrieved = search_images(query_embedding=query_embedding, top_k=top_k)
+    # Step 2: Retrieve from ChromaDB — fetch more than top_k
+    # because some results may belong to other users and get filtered out
+    retrieved = search_images(query_embedding=query_embedding, top_k=top_k * 5)
 
     if not retrieved:
         return {"query": query, "results": [], "count": 0}
 
-    # Step 3: Caption each retrieved image
-    results = []
-    for item in retrieved:
-        image_b64 = item["metadata"].get("image_b64", "")
-        filename = item["metadata"].get("filename", "unknown")
+    # Step 3: Filter by owner_id — only return current user's images
+    owned = [
+        item for item in retrieved
+        if item["metadata"].get("owner_id") == owner_id
+    ]
 
-        # Convert stored base64 back to PIL for captioning
-        image = base64_to_image(image_b64)
-        caption = medblip.caption(image)
+    # Trim to top_k after filtering
+    owned = owned[:top_k]
+
+    if not owned:
+        return {"query": query, "results": [], "count": 0}
+
+    # Step 4: Caption each retrieved image
+    results = []
+    for item in owned:
+        metadata       = item["metadata"]
+        filename       = metadata.get("filename", "unknown")
+        saved_filename = metadata.get("saved_filename", "")
+        file_url       = f"{server_base_url}/api/v1/files/{saved_filename}"
+
+        try:
+            image   = load_image_from_disk(saved_filename)
+            caption = medblip.caption(image)
+        except Exception as e:
+            print(f"[CAPTION ERROR] {saved_filename}: {e}")
+            caption = "Caption unavailable"
 
         results.append({
-            "image_id": item["image_id"],
-            "filename": filename,
+            "image_id":         item["image_id"],
+            "filename":         filename,
+            "saved_filename":   saved_filename,
+            "file_url":         file_url,
             "similarity_score": item["similarity_score"],
-            "caption": caption,
-            "image_b64": image_b64  # mobile app can render this directly
+            "caption":          caption
         })
 
+    # Step 5: Sort highest score first
+    results.sort(key=lambda x: x["similarity_score"], reverse=True)
+
     return {
-        "query": query,
-        "count": len(results),
+        "query":   query,
+        "count":   len(results),
         "results": results
     }
