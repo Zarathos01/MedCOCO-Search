@@ -12,9 +12,14 @@ from db.chroma_client import get_all_ids, delete_image, get_image_metadata
 from db.models import Users
 from db.sql_main import get_session
 from auth.dependencies import get_current_user
-from config import TOP_K
+from config import TOP_K, Config
 
 router = APIRouter()
+
+def get_base_url(request: Request) -> str:
+    if Config.BASE_URL:
+        return Config.BASE_URL.rstrip("/")
+    return str(request.base_url).rstrip("/")
 
 
 # ── Schemas ───────────────────────────────────────────────
@@ -62,7 +67,7 @@ async def upload_images(
             )
 
     try:
-        result = await process_upload(files, current_user)
+        result = await process_upload(files, current_user, get_base_url(request))
         return JSONResponse(status_code=200, content=result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
@@ -83,7 +88,7 @@ async def search(
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
 
     top_k = max(1, min(body.top_k, 20))
-    server_base_url = str(request.base_url).rstrip("/")
+    server_base_url = get_base_url(request)
 
     try:
         result = await search_and_caption(
@@ -107,7 +112,7 @@ def get_my_images(
     Returns all images uploaded by the logged-in user.
     URL is built dynamically from the current request.
     """
-    server_base_url = str(request.base_url).rstrip("/")
+    server_base_url = get_base_url(request)
     all_ids = get_all_ids()
     my_images = []
 

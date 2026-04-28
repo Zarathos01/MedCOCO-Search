@@ -7,6 +7,7 @@ from PIL import Image, UnidentifiedImageError
 
 from models.medclip_model import medclip
 from db.chroma_client import add_image, get_all_ids
+from config import Config
 
 # ── Upload folder path ────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -65,7 +66,7 @@ def delete_file_from_disk(saved_filename: str):
         os.remove(file_path)
 
 
-async def process_upload(files: list[UploadFile], current_user) -> dict:
+async def process_upload(files: list[UploadFile], current_user, request) -> dict:
     """
     For each uploaded file:
     1. Read and validate as PIL image

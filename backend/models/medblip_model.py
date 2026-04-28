@@ -22,7 +22,7 @@ class MedBLIPModel:
         with torch.no_grad():
             output = self.model.generate(**inputs, max_new_tokens=60,
                                          min_length=10,
-                                         num_beams=8,
+                                         num_beams=3,
                                             length_penalty=0.8,
                                             repetition_penalty=1.3,
                                             no_repeat_ngram_size=2,
