@@ -1,0 +1,4 @@
+Converter Supports:
+1- Folders
+2- ZIP files
+3- .dmc files without a folder
