@@ -17,16 +17,19 @@ class MedBLIPModel:
         print("[MedBLIP] Model loaded successfully.")
 
     def caption(self, image: Image.Image) -> str:
-        """Generate a caption for a single PIL image."""
         inputs = self.processor(images=image, return_tensors="pt").to(DEVICE)
         with torch.no_grad():
-            output = self.model.generate(**inputs, max_new_tokens=60,
-                                         min_length=10,
-                                         num_beams=3,
-                                            length_penalty=0.8,
-                                            repetition_penalty=1.3,
-                                            no_repeat_ngram_size=2,
-                                            early_stopping=True,)
+            output = self.model.generate(
+                **inputs,
+                max_new_tokens=80,        # slightly longer for medical detail
+                min_length=20,             # ensure meaningful minimum length
+                num_beams=5,               # better quality beam search
+                length_penalty=1.2,        # encourage slightly longer captions
+                repetition_penalty=1.3,    # stronger repetition prevention
+                no_repeat_ngram_size=3,    # keep 3-gram constraint
+                early_stopping=True,
+                temperature=1.0,           # keep default — don't add randomness
+            )
         caption = self.processor.decode(output[0], skip_special_tokens=True)
         return caption
 
