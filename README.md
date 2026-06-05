@@ -224,7 +224,7 @@ This project uses the **ROCO (Radiology Objects in Context)** dataset:
 - Modalities: X-ray, CT, MRI, Ultrasound
 - Sourced from open-access medical literature
 
-To prepare the dataset, follow the instructions in `backend/data/README.md` (if included), or download ROCO from its [official source](https://github.com/razorx89/roco-dataset).
+> 🤗 **Dataset:** [ROCOv2-radiology on Hugging Face](https://huggingface.co/datasets/eltorio/ROCOv2-radiology)
 
 ---
 
@@ -239,7 +239,7 @@ This project is licensed under the **MIT License** — you are free to use, modi
 ## 🌐 Acknowledgements
 
 - 📱 [MedCocoApp](https://github.com/Marwan9Atef/MedCocoApp) — Flutter frontend application
-- 🧬 [ROCO Dataset](https://github.com/razorx89/roco-dataset) — Radiology Objects in Context
+- 🧬 [ROCO Dataset](https://huggingface.co/datasets/eltorio/ROCOv2-radiology) — Radiology Objects in Context (ROCOv2 on Hugging Face)
 - 🤖 [MedBLIP](https://github.com/Qybc/MedBLIP) — Medical vision-language captioning model
 - 🔍 [MedCLIP](https://github.com/RyanWangZf/MedCLIP) — Medical image-text embedding model
 - 🗃️ [ChromaDB](https://www.trychroma.com/) — Open-source vector database for embeddings
